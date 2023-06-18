@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { FamilyGroupService } from './family_group.service';
-import { CreateFamilyMemberDto } from 'src/family_member/dto/create-member.dto';
 import { FamilyGroup } from './entity/family-group.entity';
 import { CreateGroupAndOwnerDto } from './dto/create-group-and-owner.dto';
 
@@ -16,9 +15,21 @@ export class FamilyGroupController {
     return this.familyGroupService.createGroupAndOwner(createGroupAndOwnerDto);
   }
 
-  // CONSULTAR GRUPO POR ID, DEVUELVE LOS MIEMBROS ASOCIADOS
-  @Get(':id')
-  getGroupById(@Param('id') id: string): Promise<FamilyGroup[]> {
-    return this.familyGroupService.getFamilyGroup(id);
+  // CONSULTAR EL NOMBRE DEL GRUPO POR CODIGO_FAMILIA
+  @Get(':codigoFamilia')
+  getGroupNameBycodigoFamilia(@Param('codigoFamilia') codigoFamilia: string) {
+    return this.familyGroupService.getGroupNameById(codigoFamilia);
+  }
+
+  // CONSULTAR GRUPO POR ID Y CI OBLIGATORIOS - DEVUELVE TODA LA INFORMACIÒN DEL GRUPO Y MIEMBROS
+  @Get(':codigoFamilia/:carnetIdentidad')
+  getGroupByIdAndCI(
+    @Param('codigoFamilia') codigoFamilia: string,
+    @Param('carnetIdentidad') carnetIdentidad: number
+  ) {
+    return this.familyGroupService.getGroupByIdAndCI(
+      codigoFamilia,
+      carnetIdentidad
+    );
   }
 }

@@ -9,6 +9,7 @@ import { CreateFamilyMemberDto } from './dto/create-member.dto';
 import { Repository } from 'typeorm';
 import { GroupOwner } from './entity/family-group-owner.enum';
 import { FamilyGroup } from 'src/family_group/entity/family-group.entity';
+import { FamilyGroupService } from 'src/family_group/family_group.service';
 
 @Injectable()
 export class FamilyMemberService {
@@ -52,5 +53,19 @@ export class FamilyMemberService {
         `El carnet de identidad ya se encuentra registrado`
       );
     }
+  }
+
+  async getMemberByCI(ci: number): Promise<FamilyMember> {
+    const member = await this.familyMemberRepository.findOne({
+      where: {
+        carnet_identidad: ci
+      }
+    });
+
+    if (!member) {
+      throw new NotFoundException('Verifique los datos suministrados');
+    }
+
+    return member;
   }
 }

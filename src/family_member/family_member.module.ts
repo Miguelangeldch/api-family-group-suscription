@@ -11,6 +11,7 @@ import { FamilyGroup } from 'src/family_group/entity/family-group.entity';
     TypeOrmModule.forFeature([FamilyGroup])
   ],
   controllers: [FamilyMemberController],
-  providers: [FamilyMemberService]
+  providers: [FamilyMemberService],
+  exports: [FamilyMemberService]
 })
 export class FamilyMemberModule {}
