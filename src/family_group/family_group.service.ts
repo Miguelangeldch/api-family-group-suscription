@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  HttpException,
   Injectable,
   NotFoundException
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { GroupOwner } from 'src/family_member/entity/family-group-owner.enum';
 import { CreateGroupAndOwnerDto } from './dto/create-group-and-owner.dto';
 import { FamilyRelationship } from 'src/family_member/entity/family-relationship.enum';
 import { FamilyMemberService } from 'src/family_member/family_member.service';
+import { GetGroupFilter } from './dto/get-group-filter.dto';
 
 @Injectable()
 export class FamilyGroupService {
@@ -74,7 +76,6 @@ export class FamilyGroupService {
   // CONSULTAR EL NOMBRE DEL GRUPO POR CODIGO_FAMILIA
   async getGroupNameById(codigoFamilia: string) {
     const group = await this._getGroupById(codigoFamilia);
-
     if (group['miembros'].length === 3) {
       throw new ConflictException(
         `El grupo ha alcanzado el maximo de registros permitidos`
@@ -91,7 +92,6 @@ export class FamilyGroupService {
     carnetIdentidad: number
   ): Promise<FamilyGroup> {
     const group = await this._getGroupById(codigoFamilia);
-
     const user = group['miembros'].find((miembro) => {
       return (
         miembro['carnet_identidad'] === Number(carnetIdentidad) &&
@@ -104,5 +104,58 @@ export class FamilyGroupService {
     }
 
     return group;
+  }
+
+  // CONSULTAR GRUPO POR ID Y CI OPCIONALES (ROL ADMIN) - DEVUELVE TODA LA INFORMACIÒN DEL GRUPO Y MIEMBROS
+
+  async getGroupByFilter(getGroupFilter: GetGroupFilter): Promise<FamilyGroup> {
+    const { carnetIdentidad, codigoFamilia } = getGroupFilter;
+
+    if (!carnetIdentidad && !codigoFamilia) throw new NotFoundException();
+
+    if (carnetIdentidad && !codigoFamilia) {
+      let group = await this.familyGroupRepository.findOne({
+        where: {
+          miembros: {
+            carnet_identidad: Number(carnetIdentidad)
+          }
+        }
+      });
+
+      if (!group) {
+        throw new NotFoundException();
+      }
+
+      group = await this._getGroupById(group['codigo_familia']);
+      return group;
+    }
+
+    const group = this._getGroupById(codigoFamilia);
+    return group;
+  }
+
+  // BORRAR GRUPO Y TODOS LOS MIEMBROS ASOCIADOS POR ID - SE ELIMINAN LOS USUARIOS PRIMERO DEBIDO A LA RELACIÓN ENTRE TABLAS
+
+  async deleteGroupById(codigoFamilia: string) {
+    await this.familyMemberRepository
+      .createQueryBuilder()
+      .delete()
+      .where('id_ = :codigoFamilia', { codigoFamilia })
+      .execute()
+      .then(async (result) => {
+        if (result.affected === 0) {
+          throw new NotFoundException(
+            `Group with ID ${codigoFamilia} not found`
+          );
+        } else {
+          await this.familyGroupRepository.delete({
+            codigo_familia: codigoFamilia
+          });
+        }
+        throw new HttpException(
+          `The task ${codigoFamilia} has been deleted`,
+          200
+        );
+      });
   }
 }
