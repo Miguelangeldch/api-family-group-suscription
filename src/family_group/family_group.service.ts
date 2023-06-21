@@ -47,7 +47,9 @@ export class FamilyGroupService {
     const codigo_familia = uuid();
 
     const _member = await this.familyMemberRepository.findOne({
-      where: { carnet_identidad }
+      where: {
+        carnet_identidad
+      }
     });
 
     if (_member) {
@@ -76,6 +78,7 @@ export class FamilyGroupService {
   // CONSULTAR EL NOMBRE DEL GRUPO POR CODIGO_FAMILIA
   async getGroupNameById(codigoFamilia: string) {
     const group = await this._getGroupById(codigoFamilia);
+
     if (group['miembros'].length === 3) {
       throw new ConflictException(
         `El grupo ha alcanzado el maximo de registros permitidos`
@@ -86,7 +89,7 @@ export class FamilyGroupService {
     };
   }
 
-  // CONSULTAR GRUPO POR ID Y CI OBLIGATORIOS - DEVUELVE TODA LA INFORMACIÒN DEL GRUPO Y MIEMBROS
+  // CONSULTAR GRUPO POR ID Y CI OBLIGATORIOS (ROL PROPIETARIO DE GRUPO) - DEVUELVE TODA LA INFORMACIÒN DEL GRUPO Y MIEMBROS
   async getGroupByIdAndCI(
     codigoFamilia: string,
     carnetIdentidad: number
@@ -137,23 +140,22 @@ export class FamilyGroupService {
   // BORRAR GRUPO Y TODOS LOS MIEMBROS ASOCIADOS POR ID - SE ELIMINAN LOS USUARIOS PRIMERO DEBIDO A LA RELACIÓN ENTRE TABLAS
 
   async deleteGroupById(codigoFamilia: string) {
-    await this.familyMemberRepository
+    await this._getGroupById(codigoFamilia);
+
+    const query = this.familyMemberRepository
       .createQueryBuilder()
+      .where('id_ = :codigoFamilia', { codigoFamilia });
+
+    await query
       .delete()
-      .where('id_ = :codigoFamilia', { codigoFamilia })
       .execute()
-      .then(async (result) => {
-        if (result.affected === 0) {
-          throw new NotFoundException(
-            `Group with ID ${codigoFamilia} not found`
-          );
-        } else {
-          await this.familyGroupRepository.delete({
-            codigo_familia: codigoFamilia
-          });
-        }
+      .then(async () => {
+        await this.familyGroupRepository.delete({
+          codigo_familia: codigoFamilia
+        });
+
         throw new HttpException(
-          `The task ${codigoFamilia} has been deleted`,
+          `The group ${codigoFamilia} has been deleted`,
           200
         );
       });

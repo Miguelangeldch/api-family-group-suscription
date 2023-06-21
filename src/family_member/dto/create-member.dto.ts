@@ -41,5 +41,5 @@ export class CreateFamilyMemberDto {
 
   @IsNotEmpty()
   @IsString()
-  codigo_familia;
+  codigo_familia: string;
 }
